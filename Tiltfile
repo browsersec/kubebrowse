@@ -1,32 +1,14 @@
 # Tiltfile for kubebrowse
-load('ext://restart_process', 'docker_build_with_restart')
 allow_k8s_contexts("default")
 print("Tilt starting up...")
 
-# Local Go compilation 
+# Encore produces the API image directly. This replaces the deleted Gin binary
+# build and requires an Encore-authenticated local environment.
 local_resource(
-    'go-build',
-    cmd='CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o .tilt/guac cmd/guac/main.go',
-    deps=['./cmd', './internal', './api', './go.mod', './go.sum'],
+    'encore-build',
+    cmd='encore build docker ghcr.io/browsersec/kubebrowse:encore-dev --base=gcr.io/distroless/static-debian12:nonroot',
+    deps=['./api', './internal', './encore.app', './go.mod', './go.sum'],
     auto_init=True
-)
-
-# Backend API (Go) - uses pre-compiled binary
-docker_build_with_restart(
-    'ghcr.io/browsersec/kubebrowse',
-    '.',
-    dockerfile='Dockerfile.tilt',
-    entrypoint='/app/guac',
-    only=[
-        './.tilt/guac',
-        './templates',
-        './certs',
-    ],
-    live_update=[
-        sync('./.tilt/guac', '/app/guac'),
-        sync('./templates', '/app/templates'),
-        run('chmod +x /app/guac')
-    ]
 )
 
 # Clean up dangling images and build cache periodically
@@ -63,10 +45,10 @@ k8s_resource(
 # Define Kubernetes resources - simplified to avoid object reference errors
 k8s_resource(
     'browser-sandbox-api',
-    port_forwards=['4567:4567'],
+    port_forwards=['8080:8080'],
     pod_readiness='wait',
     labels=["api"],
-    resource_deps=['go-build']
+    resource_deps=['encore-build']
 )
 
 # Infrastructure resources - simplified to avoid object reference issues
@@ -98,7 +80,7 @@ print("")
 print("Database Access:")
 print("- PostgreSQL: localhost:5432 (postgresuser/postgrespassword)")
 print("- Redis: localhost:6379")
-print("- API: localhost:4567")
+print("- API: localhost:8080")
 print("")
 print("To run migrations locally:")
 print("export DATABASE_URL='postgres://postgresuser:postgrespassword@localhost:5432/sandbox_db?sslmode=disable'")

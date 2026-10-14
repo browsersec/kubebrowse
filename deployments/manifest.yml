@@ -255,10 +255,10 @@ spec:
       serviceAccountName: browser-sandbox-sa
       containers:
         - name: api
-          image: ghcr.io/browsersec/kubebrowse:sha-6fd68b6
+          image: ghcr.io/browsersec/kubebrowse:encore-dev
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 4567
+            - containerPort: 8080
           resources:
             requests:
               memory: "64Mi"
@@ -324,7 +324,7 @@ spec:
             - name: GITHUB_CLIENT_SECRET
               value: "f16b7dc2b85d4a7f817e273b4a2d64124153ce8f"
             - name: GITHUB_CALLBACK_URL
-              value: "https://localhost:4567/auth/oauth/github/callback"
+                value: "https://localhost:8080/auth/oauth/github/callback"
             - name: SESSION_SECRET
               value: "McX0xoYlJYpO0EGdUZC6aJxVh2rKYrXZM7SPMpVREeXMXoMBI20v90PICD-LfEn7jr07c5vH2CWcKzjl8hoNvQ"
             - name: FRONTEND_URL
@@ -358,8 +358,8 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 4567
-      targetPort: 4567
+    - port: 8080
+      targetPort: 8080
       nodePort: 30006
   selector:
     app: browser-sandbox-api
@@ -489,11 +489,11 @@ data:
 #               cpu: "200m"
 #           env:
 #             - name: VITE_GUAC_CLIENT_URL
-#               value: "http://browser-sandbox-api.browser-sandbox.svc.cluster.local:4567"
+#               value: "http://browser-sandbox-api.browser-sandbox.svc.cluster.local:8080"
 #             - name: GUAC_CLIENT_URL
-#               value: "http://browser-sandbox-api.browser-sandbox.svc.cluster.local:4567"
+#               value: "http://browser-sandbox-api.browser-sandbox.svc.cluster.local:8080"
 #             - name: CADDY_GUAC_CLIENT_URL
-#               value: "http://browser-sandbox-api.browser-sandbox.svc.cluster.local:4567"
+#               value: "http://browser-sandbox-api.browser-sandbox.svc.cluster.local:8080"
 # ---
 # # Frontend Service
 # apiVersion: v1

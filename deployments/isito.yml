@@ -43,7 +43,7 @@ spec:
         - destination:
             host: browser-sandbox-api
             port:
-              number: 4567
+              number: 8080
     - match:
         - uri:
             prefix: "/websocket"
@@ -51,7 +51,7 @@ spec:
         - destination:
             host: browser-sandbox-api
             port:
-              number: 4567
+              number: 8080
     - route:  # Default route for frontend
         - destination:
             host: browser-sandbox-frontend

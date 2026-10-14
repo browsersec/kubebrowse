@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 )
@@ -130,17 +130,17 @@ var GlobalMetricsStore = NewMetricsStore()
 // @Success 200 {object} ErrorResponse
 // @Failure 400 {object} ErrorResponse
 // @Router /sessions/{connectionID}/metrics [post]
-func HandlerReportWebSocketMetrics(c *gin.Context, redisClient *redis.Client) {
+func HandlerReportWebSocketMetrics(c *httpx.Context, redisClient *redis.Client) {
 	connectionID := c.Param("connectionID")
 	if connectionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Connection ID is required"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Connection ID is required"})
 		return
 	}
 
 	var metrics WebSocketMetrics
 	if err := c.ShouldBindJSON(&metrics); err != nil {
 		logrus.Errorf("Failed to bind metrics request: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid metrics data"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Invalid metrics data"})
 		return
 	}
 
@@ -165,7 +165,7 @@ func HandlerReportWebSocketMetrics(c *gin.Context, redisClient *redis.Client) {
 	logrus.Debugf("Received WebSocket metrics for session %s: RTT samples=%d, msgs sent=%d, msgs recv=%d",
 		connectionID, metrics.RTT.Samples, metrics.Traffic.MessagesSent, metrics.Traffic.MessagesReceived)
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"message":    "Metrics recorded",
 		"session_id": connectionID,
 	})
@@ -181,10 +181,10 @@ func HandlerReportWebSocketMetrics(c *gin.Context, redisClient *redis.Client) {
 // @Success 200 {object} WebSocketMetrics
 // @Failure 404 {object} ErrorResponse
 // @Router /sessions/{connectionID}/metrics [get]
-func HandlerGetWebSocketMetrics(c *gin.Context, redisClient *redis.Client) {
+func HandlerGetWebSocketMetrics(c *httpx.Context, redisClient *redis.Client) {
 	connectionID := c.Param("connectionID")
 	if connectionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Connection ID is required"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Connection ID is required"})
 		return
 	}
 
@@ -208,7 +208,7 @@ func HandlerGetWebSocketMetrics(c *gin.Context, redisClient *redis.Client) {
 		}
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{"error": "Metrics not found for session"})
+	c.JSON(http.StatusNotFound, httpx.H{"error": "Metrics not found for session"})
 }
 
 // HandlerGetWebSocketMetricsHistory handles GET /sessions/:connectionID/metrics/history
@@ -221,16 +221,16 @@ func HandlerGetWebSocketMetrics(c *gin.Context, redisClient *redis.Client) {
 // @Success 200 {array} WebSocketMetrics
 // @Failure 404 {object} ErrorResponse
 // @Router /sessions/{connectionID}/metrics/history [get]
-func HandlerGetWebSocketMetricsHistory(c *gin.Context) {
+func HandlerGetWebSocketMetricsHistory(c *httpx.Context) {
 	connectionID := c.Param("connectionID")
 	if connectionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Connection ID is required"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Connection ID is required"})
 		return
 	}
 
 	history := GlobalMetricsStore.GetHistory(connectionID)
 	if len(history) == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No metrics history found for session"})
+		c.JSON(http.StatusNotFound, httpx.H{"error": "No metrics history found for session"})
 		return
 	}
 
@@ -245,7 +245,7 @@ func HandlerGetWebSocketMetricsHistory(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} map[string]WebSocketMetrics
 // @Router /metrics/websocket [get]
-func HandlerGetAllWebSocketMetrics(c *gin.Context) {
+func HandlerGetAllWebSocketMetrics(c *httpx.Context) {
 	allMetrics := GlobalMetricsStore.GetAll()
 	c.JSON(http.StatusOK, allMetrics)
 }
@@ -273,7 +273,7 @@ type WebSocketMetricsSummary struct {
 // @Produce json
 // @Success 200 {object} WebSocketMetricsSummary
 // @Router /metrics/websocket/summary [get]
-func HandlerGetWebSocketMetricsSummary(c *gin.Context) {
+func HandlerGetWebSocketMetricsSummary(c *httpx.Context) {
 	allMetrics := GlobalMetricsStore.GetAll()
 
 	summary := WebSocketMetricsSummary{

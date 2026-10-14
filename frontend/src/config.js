@@ -2,8 +2,8 @@
 // In production (e.g. Cloudflare Pages) set VITE_API_BASE_URL to the backend origin,
 // e.g. https://api.kubebrowse.example.com or https://kubebrowse-tunnel.pages.dev
 //
-// For local dev with an HTTP backend, set VITE_API_BASE_URL=http://localhost:4567
-// and run `npm run dev` (HTTP dev server).
+// Encore serves local APIs at http://localhost:4000 by default. Set
+// VITE_API_BASE_URL=http://localhost:4000 when the frontend runs separately.
 export const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 // Derive WebSocket / HTTP tunnel bases from the same origin so they stay in sync.

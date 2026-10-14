@@ -2,61 +2,61 @@
 ### Use this file with REST Client extension or similar tools
 ### 
 ### NOTE: For self-signed certificates, you may need to:
-### 1. In VS Code REST Client: Add "rest-client.certificates": {"localhost:4567": {"cert": "", "key": "", "pfx": "", "passphrase": "", "rejectUnauthorized": false}} to settings.json
+### 1. In VS Code REST Client: Add "rest-client.certificates": {"localhost:4000": {"cert": "", "key": "", "pfx": "", "passphrase": "", "rejectUnauthorized": false}} to settings.json
 ### 2. Or use HTTP instead of HTTPS for local testing
 
 ### 1. Start OAuth Flow (HTTPS with SSL verification disabled)
 # This will redirect to GitHub OAuth page
-GET https://localhost:4567/auth/oauth/github
+GET https://localhost:4000/auth/oauth/github
 Accept: text/html
 
 ###
 
 ### 1b. Start OAuth Flow (HTTP - alternative for local testing)
 # Use this if SSL certificate issues persist
-GET http://localhost:4567/auth/oauth/github
+GET http://localhost:4000/auth/oauth/github
 Accept: text/html
 
 ###
 
 ### 2. Check Current User (after OAuth login) - HTTPS
 # This requires authentication cookie from browser
-GET https://localhost:4567/auth/me
+GET https://localhost:4000/auth/me
 Cookie: kubebrowse_session=your_session_token_here
 
 ###
 
 ### 2b. Check Current User (after OAuth login) - HTTP
 # Alternative for local testing
-GET http://localhost:4567/auth/me
+GET http://localhost:4000/auth/me
 Cookie: kubebrowse_session=your_session_token_here
 
 ###
 
 ### 3. Test OAuth Callback (Manual - for debugging)
 # Note: This is typically called by GitHub, not manually
-# GET https://localhost:4567/auth/oauth/github/callback?code=OAUTH_CODE&state=STATE
+# GET https://localhost:4000/auth/oauth/github/callback?code=OAUTH_CODE&state=STATE
 
 ###
 
 ### 4. Logout - HTTPS
-POST https://localhost:4567/auth/logout
+POST https://localhost:4000/auth/logout
 Cookie: kubebrowse_session=your_session_token_here
 
 ###
 
 ### 4b. Logout - HTTP
-POST http://localhost:4567/auth/logout
+POST http://localhost:4000/auth/logout
 Cookie: kubebrowse_session=your_session_token_here
 
 ###
 
 ### 5. Health Check - HTTPS
-GET https://localhost:4567/health
+GET https://localhost:4000/health
 
 ###
 
 ### 5b. Health Check - HTTP
-GET http://localhost:4567/health
+GET http://localhost:4000/health
 
 ###

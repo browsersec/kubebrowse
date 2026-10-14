@@ -1,30 +1,30 @@
 ### Create Office Session
-POST http://localhost:4567/api/v1/sessions/office
+POST http://localhost:4000/api/v1/sessions/office
 Content-Type: application/json
 
 ###
 
 ### Get WebSocket Connection Info
-GET http://localhost:4567/api/v1/sessions/{{connection_id}}/connect
+GET http://localhost:4000/api/v1/sessions/{{connection_id}}/connect
 
 ###
 
 ### Stop Session and Delete Pod
-DELETE http://localhost:4567/sessions/{{connection_id}}/stop
+DELETE http://localhost:4000/sessions/{{connection_id}}/stop
 
 ###
 
 ### List Active Sessions
-GET http://localhost:4567/sessions/
+GET http://localhost:4000/sessions/
 
 ###
 
 ### Create Browser Pod
-POST http://localhost:4567/api/v1/pods/browser
+POST http://localhost:4000/api/v1/pods/browser
 Content-Type: application/json
 
 ###
 
 ### Create Office Pod (alternate)
-POST http://localhost:4567/api/v1/pods/office
+POST http://localhost:4000/api/v1/pods/office
 Content-Type: application/json

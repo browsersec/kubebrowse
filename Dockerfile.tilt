@@ -1,8 +1,0 @@
-FROM gcr.io/distroless/static:debug-nonroot
-WORKDIR /app
-COPY --chmod=755 --chown=nonroot:nonroot .tilt/guac /app/guac
-COPY --chown=nonroot:nonroot templates/ /app/templates/
-ENV GUACD_ADDRESS=guacd:4822
-EXPOSE 4567
-USER nonroot:nonroot
-CMD ["/app/guac"]

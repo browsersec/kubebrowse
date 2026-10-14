@@ -3,18 +3,18 @@ package auth
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	"github.com/sirupsen/logrus"
 )
 
 // AuthMiddleware is a middleware that validates user sessions
-func AuthMiddleware(service *Service) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func AuthMiddleware(service *Service) httpx.HandlerFunc {
+	return func(c *httpx.Context) {
 		// Get session token from cookie
 		sessionToken, err := c.Cookie(SessionCookieName)
 		if err != nil {
 			logrus.Debugf("AuthMiddleware: No session cookie found: %v", err)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			c.JSON(http.StatusUnauthorized, httpx.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
@@ -29,12 +29,12 @@ func AuthMiddleware(service *Service) gin.HandlerFunc {
 				logrus.Debugf("AuthMiddleware: Session expired for token: %s", sessionToken)
 				// Clear invalid cookie
 				c.SetCookie(SessionCookieName, "", -1, "/", "", false, true)
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Session expired"})
+				c.JSON(http.StatusUnauthorized, httpx.H{"error": "Session expired"})
 				c.Abort()
 				return
 			}
 			logrus.Errorf("Session validation error: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Session validation failed"})
+			c.JSON(http.StatusInternalServerError, httpx.H{"error": "Session validation failed"})
 			c.Abort()
 			return
 		}
@@ -51,8 +51,8 @@ func AuthMiddleware(service *Service) gin.HandlerFunc {
 
 // OptionalAuthMiddleware is a middleware that optionally validates user sessions
 // It doesn't abort the request if authentication fails, but sets user context if available
-func OptionalAuthMiddleware(service *Service) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func OptionalAuthMiddleware(service *Service) httpx.HandlerFunc {
+	return func(c *httpx.Context) {
 		// Get session token from cookie
 		sessionToken, err := c.Cookie(SessionCookieName)
 		if err != nil {

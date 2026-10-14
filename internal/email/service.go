@@ -43,7 +43,7 @@ func NewService() *Service {
 
 	baseURL := os.Getenv("BASE_URL")
 	if baseURL == "" {
-		baseURL = "https://localhost:4567"
+		baseURL = "https://localhost:4000"
 	}
 
 	return &Service{

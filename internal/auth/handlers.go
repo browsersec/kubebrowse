@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gin-gonic/gin"
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,54 +43,54 @@ type AuthResponse struct {
 }
 
 // RegisterWithEmail handles user registration with email and password
-func (h *Handler) RegisterWithEmail(c *gin.Context) {
+func (h *Handler) RegisterWithEmail(c *httpx.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
 	user, err := h.service.RegisterWithEmail(req.Email, req.Password)
 	if err != nil {
 		if err == ErrUserAlreadyExists {
-			c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
+			c.JSON(http.StatusConflict, httpx.H{"error": "User already exists"})
 			return
 		}
 		logrus.Errorf("Failed to register user: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to register user"})
 		return
 	}
 
 	// Don't create session immediately - user needs to verify email first
-	c.JSON(http.StatusCreated, gin.H{
+	c.JSON(http.StatusCreated, httpx.H{
 		"user":    user,
 		"message": "User registered successfully. Please check your email to verify your account.",
 	})
 }
 
 // LoginWithEmail handles user login with email and password
-func (h *Handler) LoginWithEmail(c *gin.Context) {
+func (h *Handler) LoginWithEmail(c *httpx.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
 	user, session, err := h.service.LoginWithEmail(req.Email, req.Password)
 	if err != nil {
 		if err == ErrInvalidCredentials {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			c.JSON(http.StatusUnauthorized, httpx.H{"error": "Invalid credentials"})
 			return
 		}
 		if err == ErrEmailNotVerified {
-			c.JSON(http.StatusForbidden, gin.H{
+			c.JSON(http.StatusForbidden, httpx.H{
 				"error": "Email not verified. Please check your email and verify your account.",
 				"code":  "EMAIL_NOT_VERIFIED",
 			})
 			return
 		}
 		logrus.Errorf("Failed to login user: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to login"})
 		return
 	}
 
@@ -104,7 +104,7 @@ func (h *Handler) LoginWithEmail(c *gin.Context) {
 }
 
 // Logout handles user logout
-func (h *Handler) Logout(c *gin.Context) {
+func (h *Handler) Logout(c *httpx.Context) {
 	// Get session token from cookie
 	sessionToken, err := c.Cookie(SessionCookieName)
 	if err == nil && sessionToken != "" {
@@ -118,18 +118,18 @@ func (h *Handler) Logout(c *gin.Context) {
 	// Clear session cookie
 	h.clearSessionCookie(c)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+	c.JSON(http.StatusOK, httpx.H{"message": "Logged out successfully"})
 }
 
 // GetCurrentUser returns the current authenticated user
-func (h *Handler) GetCurrentUser(c *gin.Context) {
+func (h *Handler) GetCurrentUser(c *httpx.Context) {
 	user, exists := c.Get(UserContextKey)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		c.JSON(http.StatusUnauthorized, httpx.H{"error": "Not authenticated"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, httpx.H{"user": user})
 }
 
 // UpdateProfileRequest represents the request body for profile updates
@@ -146,10 +146,10 @@ type UpdatePasswordRequest struct {
 }
 
 // UpdateProfile handles user profile updates
-func (h *Handler) UpdateProfile(c *gin.Context) {
+func (h *Handler) UpdateProfile(c *httpx.Context) {
 	user, exists := c.Get(UserContextKey)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		c.JSON(http.StatusUnauthorized, httpx.H{"error": "Not authenticated"})
 		return
 	}
 
@@ -157,7 +157,7 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
@@ -165,21 +165,21 @@ func (h *Handler) UpdateProfile(c *gin.Context) {
 	updatedUser, err := h.service.UpdateUserProfile(authUser.ID, req.Username, req.Name, req.AvatarURL)
 	if err != nil {
 		logrus.Errorf("Failed to update user profile: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to update profile"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"user":    updatedUser,
 		"message": "Profile updated successfully",
 	})
 }
 
 // UpdatePassword handles user password updates
-func (h *Handler) UpdatePassword(c *gin.Context) {
+func (h *Handler) UpdatePassword(c *httpx.Context) {
 	user, exists := c.Get(UserContextKey)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		c.JSON(http.StatusUnauthorized, httpx.H{"error": "Not authenticated"})
 		return
 	}
 
@@ -187,14 +187,14 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 
 	var req UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
 	// Verify current password
 	_, session, err := h.service.LoginWithEmail(authUser.Email, req.CurrentPassword)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Current password is incorrect"})
 		return
 	}
 
@@ -202,7 +202,7 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 	err = h.service.UpdateUserPassword(authUser.ID, req.NewPassword)
 	if err != nil {
 		logrus.Errorf("Failed to update password: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to update password"})
 		return
 	}
 
@@ -216,23 +216,23 @@ func (h *Handler) UpdatePassword(c *gin.Context) {
 	newSession, err := h.service.CreateSession(authUser.ID)
 	if err != nil {
 		logrus.Errorf("Failed to create new session: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new session"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to create new session"})
 		return
 	}
 
 	// Set new session cookie
 	h.setSessionCookie(c, newSession.SessionToken)
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"message": "Password updated successfully",
 	})
 }
 
 // GetUserProfile returns the current user's profile
-func (h *Handler) GetUserProfile(c *gin.Context) {
+func (h *Handler) GetUserProfile(c *httpx.Context) {
 	user, exists := c.Get(UserContextKey)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+		c.JSON(http.StatusUnauthorized, httpx.H{"error": "Not authenticated"})
 		return
 	}
 
@@ -242,15 +242,15 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 	freshUser, err := h.service.GetUserByID(authUser.ID)
 	if err != nil {
 		logrus.Errorf("Failed to get user profile: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user profile"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to get user profile"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": freshUser})
+	c.JSON(http.StatusOK, httpx.H{"user": freshUser})
 }
 
 // setSessionCookie sets the session cookie
-func (h *Handler) setSessionCookie(c *gin.Context, sessionToken string) {
+func (h *Handler) setSessionCookie(c *httpx.Context, sessionToken string) {
 	// Get the request host to set proper cookie domain
 	host := c.Request.Host
 	var domain string
@@ -294,13 +294,13 @@ type ResendVerificationRequest struct {
 }
 
 // VerifyEmail handles email verification
-func (h *Handler) VerifyEmail(c *gin.Context) {
+func (h *Handler) VerifyEmail(c *httpx.Context) {
 	token := c.Query("token")
 	if token == "" {
 		// Try to get token from request body
 		var req VerifyEmailRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Verification token is required"})
+			c.JSON(http.StatusBadRequest, httpx.H{"error": "Verification token is required"})
 			return
 		}
 		token = req.Token
@@ -309,11 +309,11 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	user, err := h.service.VerifyEmail(token)
 	if err != nil {
 		if err == ErrInvalidToken {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired verification token"})
+			c.JSON(http.StatusBadRequest, httpx.H{"error": "Invalid or expired verification token"})
 			return
 		}
 		logrus.Errorf("Failed to verify email: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify email"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to verify email"})
 		return
 	}
 
@@ -321,7 +321,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	session, err := h.service.CreateSession(user.ID)
 	if err != nil {
 		logrus.Errorf("Failed to create session after verification: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to create session"})
 		return
 	}
 
@@ -339,38 +339,38 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 	}
 
 	// For API requests, return JSON response
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"user":    user,
 		"message": "Email verified successfully",
 	})
 }
 
 // ResendVerificationEmail handles resending verification email
-func (h *Handler) ResendVerificationEmail(c *gin.Context) {
+func (h *Handler) ResendVerificationEmail(c *httpx.Context) {
 	var req ResendVerificationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
 	err := h.service.ResendVerificationEmail(req.Email)
 	if err != nil {
 		if err == ErrUserNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "User not found or email already verified"})
+			c.JSON(http.StatusNotFound, httpx.H{"error": "User not found or email already verified"})
 			return
 		}
 		logrus.Errorf("Failed to resend verification email: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resend verification email"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to resend verification email"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"message": "Verification email sent successfully",
 	})
 }
 
 // clearSessionCookie clears the session cookie
-func (h *Handler) clearSessionCookie(c *gin.Context) {
+func (h *Handler) clearSessionCookie(c *httpx.Context) {
 	c.SetCookie(
 		SessionCookieName,
 		"",

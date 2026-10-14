@@ -54,7 +54,7 @@ sqlc generate
 3. Fill in the details:
    - **Application name**: KubeBrowse
    - **Homepage URL**: `http://localhost:3000` (or your domain)
-   - **Authorization callback URL**: `http://localhost:4567/auth/oauth/github/callback`
+   - **Authorization callback URL**: `http://localhost:4000/auth/oauth/github/callback`
 4. Click "Register application"
 5. Note down the **Client ID** and **Client Secret**
 
@@ -70,7 +70,7 @@ DATABASE_URL=postgres://postgresuser:postgrespassword@localhost:5432/kubebrowse?
 # GitHub OAuth Configuration
 GITHUB_CLIENT_ID=your_github_client_id_here
 GITHUB_CLIENT_SECRET=your_github_client_secret_here
-GITHUB_CALLBACK_URL=http://localhost:4567/auth/oauth/github/callback
+GITHUB_CALLBACK_URL=http://localhost:4000/auth/oauth/github/callback
 
 # Frontend URL for OAuth redirects
 FRONTEND_URL=http://localhost:3000
@@ -88,7 +88,7 @@ REDIS_HOST=localhost
 Create a `.env.local` file in the frontend directory:
 
 ```bash
-VITE_API_URL=http://localhost:4567
+VITE_API_BASE_URL=http://localhost:4000
 ```
 
 ### 4. Backend Setup
@@ -98,7 +98,7 @@ VITE_API_URL=http://localhost:4567
 #### Build and Run
 ```bash
 # Build the application
-go build ./cmd/guac
+encore run
 
 # Run the application
 ./guac
@@ -138,7 +138,7 @@ pnpm dev
 
 #### Register with Email
 ```bash
-curl -X POST http://localhost:4567/auth/register \
+curl -X POST http://localhost:4000/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -148,7 +148,7 @@ curl -X POST http://localhost:4567/auth/register \
 
 #### Login with Email
 ```bash
-curl -X POST http://localhost:4567/auth/login \
+curl -X POST http://localhost:4000/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -158,7 +158,7 @@ curl -X POST http://localhost:4567/auth/login \
 
 #### Get Current User
 ```bash
-curl -X GET http://localhost:4567/auth/me \
+curl -X GET http://localhost:4000/auth/me \
   -H "Cookie: kubebrowse_session=your_session_token"
 ```
 

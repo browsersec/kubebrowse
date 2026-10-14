@@ -9,24 +9,24 @@ import (
 	"fmt"
 
 	guac2 "github.com/browsersec/KubeBrowse/internal/guac"
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	"github.com/browsersec/KubeBrowse/internal/k8s"
 	redis2 "github.com/browsersec/KubeBrowse/internal/redis"
-	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Endpoint to stop a specific WebSocket session
-func HandlerStopWSSession(c *gin.Context, redisClient *redis.Client, k8sClient *kubernetes.Clientset, server *guac2.Server) {
+func HandlerStopWSSession(c *httpx.Context, redisClient *redis.Client, k8sClient *kubernetes.Clientset, server *guac2.Server) {
 	connectionID := c.Param("connectionID")
 
 	if err := stopWSSession(connectionID, redisClient, k8sClient, server); err != nil {
 		logrus.Errorf("Failed to stop WebSocket session: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Session %s stopped and pod deleted.", connectionID)})
+	c.JSON(http.StatusOK, httpx.H{"message": fmt.Sprintf("Session %s stopped and pod deleted.", connectionID)})
 }
 
 // StopWSSession is an exported version of stopWSSession that can be used by other packages
@@ -76,7 +76,7 @@ func stopWSSession(connectionID string, redisClient *redis.Client, k8sClient *ku
 }
 
 // Session management handler
-func HandlerSession(c *gin.Context, activeTunnels *guac2.ActiveTunnelStore) {
+func HandlerSession(c *httpx.Context, activeTunnels *guac2.ActiveTunnelStore) {
 	c.Header("Content-Type", "application/json")
 
 	// sessions.RLock() // Old store lock
@@ -104,7 +104,7 @@ func HandlerSession(c *gin.Context, activeTunnels *guac2.ActiveTunnelStore) {
 	}
 
 	// c.JSON(http.StatusOK, connIds) // Old way
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"active_sessions": len(connInfos),
 		"connection_ids":  connInfos,
 	})

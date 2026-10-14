@@ -6,8 +6,6 @@
 *.dylib
 /guac
 
-# Make sure cmd/guac directory is not ignored
-!cmd/guac/
 
 # Test binary, built with `go test -c`
 *.test

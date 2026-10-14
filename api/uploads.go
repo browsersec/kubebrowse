@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	redis2 "github.com/browsersec/KubeBrowse/internal/redis"
-	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/minio/minio-go/v7"
 	"github.com/sirupsen/logrus"
@@ -62,37 +62,37 @@ func getFQDNURL(connectionID string, redisClient *redis.Client) (string, error) 
 }
 
 // HandlerUploadFile handles file uploads to multiple destinations concurrently
-func HandlerUploadFile(c *gin.Context, redisClient *redis.Client, k8sClient *kubernetes.Clientset, minioClient *minio.Client, minioBucket string, clamavurl string, timeout time.Duration) {
+func HandlerUploadFile(c *httpx.Context, redisClient *redis.Client, k8sClient *kubernetes.Clientset, minioClient *minio.Client, minioBucket string, clamavurl string, timeout time.Duration) {
 	start := time.Now()
 
 	// Get connection URL
 	url, err := getFQDNURL(c.Param("connectionID"), redisClient)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
 	if url == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid connection ID"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Invalid connection ID"})
 		return
 	}
 
 	// Get uploaded file
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "file is required"})
 		return
 	}
 
 	if fileHeader.Size <= 0 || fileHeader.Size > maxUploadBytes {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "file too large"})
+		c.JSON(http.StatusRequestEntityTooLarge, httpx.H{"error": "file too large"})
 		return
 	}
 
 	// Read file once into memory buffer
 	fileBuffer, err := readFileToBuffer(fileHeader)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "failed to read file: " + err.Error()})
 		return
 	}
 
@@ -152,37 +152,37 @@ func readFileToBuffer(fileHeader *multipart.FileHeader) (*FileBuffer, error) {
 }
 
 // HandlerUploadFileWithoutMinio handles file uploads without MinIO storage
-func HandlerUploadFileWithoutMinio(c *gin.Context, redisClient *redis.Client, k8sClient *kubernetes.Clientset, clamavurl string, timeout time.Duration) {
+func HandlerUploadFileWithoutMinio(c *httpx.Context, redisClient *redis.Client, k8sClient *kubernetes.Clientset, clamavurl string, timeout time.Duration) {
 	start := time.Now()
 
 	// Get connection URL
 	url, err := getFQDNURL(c.Param("connectionID"), redisClient)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
 	if url == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid connection ID"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "Invalid connection ID"})
 		return
 	}
 
 	// Get uploaded file
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "file is required"})
 		return
 	}
 
 	if fileHeader.Size <= 0 || fileHeader.Size > maxUploadBytes {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "file too large"})
+		c.JSON(http.StatusRequestEntityTooLarge, httpx.H{"error": "file too large"})
 		return
 	}
 
 	// Read file once into memory buffer
 	fileBuffer, err := readFileToBuffer(fileHeader)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "failed to read file: " + err.Error()})
 		return
 	}
 
