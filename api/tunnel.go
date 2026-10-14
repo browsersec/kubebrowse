@@ -262,12 +262,16 @@ func DemoDoConnect(request *http.Request, tunnelStore *guac2.ActiveTunnelStore, 
 			}
 		}
 
-		// Register session with cleanup service
-		cleanupService.RegisterSession(
-			session.ConnectionID,
-			session.PodName,
-			tunnel.ConnectionID(), // Pass the tunnel's ConnectionID
-		)
+		// Register session with cleanup service when Kubernetes integration is
+		// available. Encore can run outside the target cluster, where the
+		// cleanup service is intentionally unavailable.
+		if cleanupService != nil {
+			cleanupService.RegisterSession(
+				session.ConnectionID,
+				session.PodName,
+				tunnel.ConnectionID(), // Pass the tunnel's ConnectionID
+			)
+		}
 
 	} else if tunnel != nil {
 		logrus.Warnf("Tunnel created but ConnectionID is empty. Not adding to store. UUID: %s", tunnel.GetUUID())

@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -168,7 +168,7 @@ func (m *KubeBrowseManager) initializeDB() error {
 }
 
 // RegisterUser handles user registration
-func (m *KubeBrowseManager) RegisterUser(c *gin.Context) {
+func (m *KubeBrowseManager) RegisterUser(c *httpx.Context) {
 	var user struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
@@ -176,7 +176,7 @@ func (m *KubeBrowseManager) RegisterUser(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
@@ -197,25 +197,25 @@ func (m *KubeBrowseManager) RegisterUser(c *gin.Context) {
 	if err != nil {
 		// Check for unique constraint violation
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			c.JSON(http.StatusConflict, gin.H{"error": "Username or email already exists"})
+			c.JSON(http.StatusConflict, httpx.H{"error": "Username or email already exists"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to create user"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": userID, "username": user.Username})
+	c.JSON(http.StatusCreated, httpx.H{"id": userID, "username": user.Username})
 }
 
 // LoginUser handles user login
-func (m *KubeBrowseManager) LoginUser(c *gin.Context) {
+func (m *KubeBrowseManager) LoginUser(c *httpx.Context) {
 	var credentials struct {
 		Username string `json:"username" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&credentials); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
@@ -231,30 +231,30 @@ func (m *KubeBrowseManager) LoginUser(c *gin.Context) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			c.JSON(http.StatusUnauthorized, httpx.H{"error": "Invalid credentials"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Database error"})
 		return
 	}
 
 	// Verify password (in a real app, use bcrypt)
 	if user.PasswordHash != credentials.Password {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, httpx.H{"error": "Invalid credentials"})
 		return
 	}
 
 	// Generate JWT token (in a real app)
 	token := "dummy-token-" + user.ID
 
-	c.JSON(http.StatusOK, gin.H{"token": token, "user_id": user.ID})
+	c.JSON(http.StatusOK, httpx.H{"token": token, "user_id": user.ID})
 }
 
 // CreateSession creates a new browser or office session
-func (m *KubeBrowseManager) CreateSession(c *gin.Context) {
+func (m *KubeBrowseManager) CreateSession(c *httpx.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID not found"})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": "User ID not found"})
 		return
 	}
 
@@ -263,7 +263,7 @@ func (m *KubeBrowseManager) CreateSession(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&sessionRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, httpx.H{"error": err.Error()})
 		return
 	}
 
@@ -282,7 +282,7 @@ func (m *KubeBrowseManager) CreateSession(c *gin.Context) {
 
 	if err != nil {
 		log.Printf("Error creating pod: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create sandbox environment"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to create sandbox environment"})
 		return
 	}
 
@@ -296,7 +296,7 @@ func (m *KubeBrowseManager) CreateSession(c *gin.Context) {
 	)
 	if err != nil {
 		log.Printf("Database error creating session: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Failed to create session"})
 		return
 	}
 
@@ -316,7 +316,7 @@ func (m *KubeBrowseManager) CreateSession(c *gin.Context) {
 }
 
 // GetSession returns details for a specific session
-func (m *KubeBrowseManager) GetSession(c *gin.Context) {
+func (m *KubeBrowseManager) GetSession(c *httpx.Context) {
 	sessionID := c.Param("id")
 	userID := c.GetString("userID")
 
@@ -328,10 +328,10 @@ func (m *KubeBrowseManager) GetSession(c *gin.Context) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+			c.JSON(http.StatusNotFound, httpx.H{"error": "Session not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Database error"})
 		return
 	}
 
@@ -339,7 +339,7 @@ func (m *KubeBrowseManager) GetSession(c *gin.Context) {
 }
 
 // ExtendSession extends the timeout of a session
-func (m *KubeBrowseManager) ExtendSession(c *gin.Context) {
+func (m *KubeBrowseManager) ExtendSession(c *httpx.Context) {
 	sessionID := c.Param("id")
 	userID := c.GetString("userID")
 
@@ -348,21 +348,21 @@ func (m *KubeBrowseManager) ExtendSession(c *gin.Context) {
 		sessionID, userID,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Database error"})
 		return
 	}
 
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Active session not found"})
+		c.JSON(http.StatusNotFound, httpx.H{"error": "Active session not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Session extended"})
+	c.JSON(http.StatusOK, httpx.H{"message": "Session extended"})
 }
 
 // CloseSession terminates a session and its pod
-func (m *KubeBrowseManager) CloseSession(c *gin.Context) {
+func (m *KubeBrowseManager) CloseSession(c *httpx.Context) {
 	sessionID := c.Param("id")
 	userID := c.GetString("userID")
 
@@ -375,10 +375,10 @@ func (m *KubeBrowseManager) CloseSession(c *gin.Context) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+			c.JSON(http.StatusNotFound, httpx.H{"error": "Session not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Database error"})
 		return
 	}
 
@@ -388,7 +388,7 @@ func (m *KubeBrowseManager) CloseSession(c *gin.Context) {
 		sessionID,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		c.JSON(http.StatusInternalServerError, httpx.H{"error": "Database error"})
 		return
 	}
 
@@ -403,7 +403,7 @@ func (m *KubeBrowseManager) CloseSession(c *gin.Context) {
 		// Still return success to the client as the session is marked as closed
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Session closed"})
+	c.JSON(http.StatusOK, httpx.H{"message": "Session closed"})
 }
 
 // Helper functions for environment variables

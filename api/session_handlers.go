@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/browsersec/KubeBrowse/internal/cleanup"
+	"github.com/browsersec/KubeBrowse/internal/httpx"
 	redis2 "github.com/browsersec/KubeBrowse/internal/redis"
-	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 )
@@ -32,10 +32,10 @@ type ExtendSessionResponse struct {
 }
 
 // HandlerExtendSession handles session timeout extension requests
-func HandlerExtendSession(c *gin.Context, redisClient *redis.Client, cleanupService *cleanup.SessionCleanupService) {
+func HandlerExtendSession(c *httpx.Context, redisClient *redis.Client, cleanupService *cleanup.SessionCleanupService) {
 	connectionID := c.Param("connectionID")
 	if connectionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, httpx.H{
 			"error": "Connection ID is required",
 		})
 		return
@@ -43,7 +43,7 @@ func HandlerExtendSession(c *gin.Context, redisClient *redis.Client, cleanupServ
 
 	var req ExtendSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, httpx.H{
 			"error": fmt.Sprintf("Invalid request: %v", err),
 		})
 		return
@@ -53,7 +53,7 @@ func HandlerExtendSession(c *gin.Context, redisClient *redis.Client, cleanupServ
 	canExtend, timeLeft, err := redis2.CanExtendSession(redisClient, connectionID)
 	if err != nil {
 		logrus.Errorf("Error checking if session %s can be extended: %v", connectionID, err)
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(http.StatusNotFound, httpx.H{
 			"error": "Session not found",
 		})
 		return
@@ -80,7 +80,7 @@ func HandlerExtendSession(c *gin.Context, redisClient *redis.Client, cleanupServ
 	err = redis2.ExtendSession(redisClient, connectionID, extensionDuration)
 	if err != nil {
 		logrus.Errorf("Error extending session %s: %v", connectionID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, httpx.H{
 			"error": fmt.Sprintf("Failed to extend session: %v", err),
 		})
 		return
@@ -108,10 +108,10 @@ func HandlerExtendSession(c *gin.Context, redisClient *redis.Client, cleanupServ
 }
 
 // HandlerGetSessionTimeLeft returns the remaining time for a session
-func HandlerGetSessionTimeLeft(c *gin.Context, redisClient *redis.Client) {
+func HandlerGetSessionTimeLeft(c *httpx.Context, redisClient *redis.Client) {
 	connectionID := c.Param("connectionID")
 	if connectionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, httpx.H{
 			"error": "Connection ID is required",
 		})
 		return
@@ -120,7 +120,7 @@ func HandlerGetSessionTimeLeft(c *gin.Context, redisClient *redis.Client) {
 	timeLeft, err := redis2.GetSessionTimeLeft(redisClient, connectionID)
 	if err != nil {
 		logrus.Errorf("Error getting time left for session %s: %v", connectionID, err)
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(http.StatusNotFound, httpx.H{
 			"error": "Session not found or expired",
 		})
 		return
@@ -142,13 +142,13 @@ func HandlerGetSessionTimeLeft(c *gin.Context, redisClient *redis.Client) {
 }
 
 // HandlerRegisterSession registers a new session for cleanup monitoring
-func HandlerRegisterSession(c *gin.Context, redisClient *redis.Client, cleanupService *cleanup.SessionCleanupService) {
+func HandlerRegisterSession(c *httpx.Context, redisClient *redis.Client, cleanupService *cleanup.SessionCleanupService) {
 	sessionID := c.Param("connectionID")
 	podName := c.Query("pod_name")
 	userID := c.Query("user_id")
 
 	if sessionID == "" || podName == "" || userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, httpx.H{
 			"error": "Session ID, pod name, and user ID are required",
 		})
 		return
@@ -157,7 +157,7 @@ func HandlerRegisterSession(c *gin.Context, redisClient *redis.Client, cleanupSe
 	// Verify session exists in Redis
 	_, err := redis2.GetSessionTimeLeft(redisClient, sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(http.StatusNotFound, httpx.H{
 			"error": "Session not found",
 		})
 		return
@@ -165,7 +165,7 @@ func HandlerRegisterSession(c *gin.Context, redisClient *redis.Client, cleanupSe
 
 	cleanupService.RegisterSession(sessionID, podName, userID)
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"message":    "Session registered for cleanup monitoring",
 		"session_id": sessionID,
 		"pod_name":   podName,
@@ -173,10 +173,10 @@ func HandlerRegisterSession(c *gin.Context, redisClient *redis.Client, cleanupSe
 }
 
 // HandlerUnregisterSession removes a session from cleanup monitoring
-func HandlerUnregisterSession(c *gin.Context, cleanupService *cleanup.SessionCleanupService) {
+func HandlerUnregisterSession(c *httpx.Context, cleanupService *cleanup.SessionCleanupService) {
 	sessionID := c.Param("connectionID")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, httpx.H{
 			"error": "Session ID is required",
 		})
 		return
@@ -184,7 +184,7 @@ func HandlerUnregisterSession(c *gin.Context, cleanupService *cleanup.SessionCle
 
 	cleanupService.UnregisterSession(sessionID)
 
-	c.JSON(http.StatusOK, gin.H{
+	c.JSON(http.StatusOK, httpx.H{
 		"message":    "Session unregistered from cleanup monitoring",
 		"session_id": sessionID,
 	})

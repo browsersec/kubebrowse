@@ -11,7 +11,7 @@ The project combines session provisioning, remote interaction, file uploads, and
 - **Session controls:** creation, reconnection, sharing, remaining-time checks, timeout extension, and explicit stop requests. Redis holds session metadata; active tunnels are also tracked in the API process.
 - **File handling:** uploads to the selected session, ClamAV scan results, and optional MinIO object storage. The API accepts files up to 100 MiB; downstream services may impose lower limits.
 - **Cleanup:** background monitoring of registered sessions attempts to close tunnels, delete pods, and remove Redis metadata when sessions expire.
-- **Development and observability:** Kubernetes manifests, a Tilt workflow, Swagger documentation, and WebSocket metrics endpoints. Separate manifests provide HPA and Istio ingress configuration.
+- **Development and observability:** Encore owns the Go API runtime, local development workflow, API documentation, and request observability. Kubernetes manifests, a Tilt workflow, and WebSocket metrics endpoints remain for the sandbox infrastructure.
 
 ## How it works
 
@@ -46,23 +46,32 @@ Chrome extension attachment imports, VirusTotal integration, and Firejail harden
 
 ## Local development
 
-You need Go compatible with [go.mod](go.mod) (Go 1.24, toolchain 1.24.3), Node.js and npm for the frontend, Docker, `kubectl`, Tilt, and a Kubernetes development cluster with storage provisioning and access to the sandbox images.
+You need the [Encore CLI](https://encore.dev/docs/install), Go compatible with [go.mod](go.mod) (Go 1.24, toolchain 1.24.3), Node.js and npm for the frontend, Docker, `kubectl`, Tilt, and a Kubernetes development cluster with storage provisioning and access to the sandbox images.
+
+Before the first local run, authenticate and register this existing repository with your Encore account. This updates the placeholder application ID in [encore.app](encore.app):
+
+```sh
+encore auth login
+encore app init
+```
+
+For CI Encore validation, configure an `ENCORE_AUTH_TOKEN` repository secret. The workflow still runs `go test ./...` when that secret is unavailable, such as on untrusted pull requests.
 
 Review [deployments/manifest.yml](deployments/manifest.yml) before applying it: it contains example credentials and deployment-specific settings. Set the Kubernetes context allowed by [Tiltfile](Tiltfile) to your development cluster. Browser and office images can be overridden with `BROWSER_IMAGE` and `OFFICE_IMAGE` in the API deployment environment.
 
-From the repository root, apply the supporting services and scanner, then start Tilt:
+From the repository root, apply the supporting services and scanner. Start the Encore API separately so it can use your kubeconfig, or deploy it with credentials that can reach the target cluster:
 
 ```sh
 kubectl apply -f deployments/manifest.yml
 kubectl apply -f deployments/clamavd-api.yaml
-tilt up
+encore run
 ```
 
-Tilt builds the Go API and configures an API port forward at `http://localhost:4567`. The frontend deployment is currently commented out in the manifest, so run the frontend separately in another terminal:
+Encore exposes the local API at `http://localhost:4000` by default. The frontend deployment is currently commented out in the manifest, so run the frontend separately in another terminal:
 
 ```sh
 npm --prefix frontend install
-VITE_API_BASE_URL=http://localhost:4567 npm --prefix frontend run dev
+VITE_API_BASE_URL=http://localhost:4000 npm --prefix frontend run dev
 ```
 
 Open the address printed by Vite. `VITE_API_BASE_URL` supplies the backend origin for REST calls and derives the WebSocket and HTTP tunnel origins; it is also needed at build time when the frontend is hosted separately.
@@ -85,7 +94,7 @@ See the [contribution guide](docs/CONTRIBUTING.md) and [Tilt development guide](
 | POST | `/sessions/:connectionID/extend` | Request a timeout extension |
 | DELETE | `/sessions/:connectionID/stop` | Request session termination |
 
-Swagger UI is served at `/swagger/index.html`. Route registration in [cmd/guac/main.go](cmd/guac/main.go) is the reference for the current endpoints.
+Encore generates API documentation from the endpoint declarations in [api/endpoints.go](api/endpoints.go). Guacamole HTTP and WebSocket tunnels use Encore raw endpoints because they need direct access to the HTTP connection.
 
 ## Community and license
 

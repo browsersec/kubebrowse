@@ -1,12 +1,10 @@
+ENCORE ?= encore
+
 all: run
 
 # Install dependencies
 deps:
 	go mod tidy
-
-# Generate Swagger/OpenAPI docs
-swag:
-	swag init -g main.go -d ./cmd/guac,./api
 
 # Install git hooks using lefthook
 hooks:
@@ -29,11 +27,9 @@ lint:
 	@echo "Running pre-commit checks on staged files using lefthook..."
 	@lefthook run pre-commit --files $(git diff --name-only --cached)
 
-# run the server
-run: deps
-	@echo "Running server..."
-	@echo "Starting server..."
-	go run cmd/guac/main.go
+# Run the Encore application. Encore owns the API server lifecycle.
+run:
+	$(ENCORE) run
 
 run_frontend:
 	@echo "Running frontend..."
@@ -52,14 +48,13 @@ generate_prod:
 	sudo cp /etc/letsencrypt/live/$(DOMAIN)/privkey.pem certs/prod/private.key
 
 test:
-	go test -race -v .
+	$(ENCORE) test ./...
 
 test_coverage:
-	go test -race -coverprofile=coverage.out -v .
-	go tool cover -html=coverage.out
+	$(ENCORE) test ./...
 
-build: deps
-	go build -v -o guac cmd/guac/main.go
+build:
+	@echo "Encore applications are built and deployed with 'encore deploy'."
 
 # MkDocs documentation targets
 docs-setup:
@@ -114,16 +109,15 @@ load-office:
 load-images: load-chromium load-office
 
 help:
-	go run cmd/guac/main.go -h
 	@echo ""
 	@echo "Additional Make targets:"
-	@echo "  deps         - Install dependencies"
+	@echo "  deps         - Refresh Go dependencies"
 	@echo "  hooks        - Install lefthook git hooks"
 	@echo "  setup        - Set up development environment (deps + hooks)"
 	@echo "  lint         - Run lefthook pre-commit checks on staged files"
 	@echo "  lint-all     - Run lefthook pre-commit checks on all files"
 	@echo "  test         - Run tests"
-	@echo "  build        - Build the project"
+	@echo "  build        - Show the Encore deployment command"
 	@echo "  docs-setup   - Install MkDocs and Material theme via pip"
 	@echo "  docs-serve   - Serve documentation locally"
 	@echo "  docs-build   - Build documentation into static files"
