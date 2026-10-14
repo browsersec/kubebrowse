@@ -32,7 +32,7 @@ Ensure these environment variables are set in your backend:
 # GitHub OAuth
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
-GITHUB_CALLBACK_URL=https://localhost:4567/auth/oauth/github/callback
+GITHUB_CALLBACK_URL=http://localhost:4000/auth/oauth/github/callback
 
 # Frontend URL
 FRONTEND_URL=http://localhost:3000
@@ -45,7 +45,7 @@ SESSION_SECRET=your_long_random_secret
 
 1. Go to GitHub Settings > Developer settings > OAuth Apps
 2. Create a new OAuth App
-3. Set Authorization callback URL to: `https://localhost:4567/auth/oauth/github/callback`
+3. Set Authorization callback URL to: `http://localhost:4000/auth/oauth/github/callback`
 4. Copy Client ID and Client Secret
 
 ### 3. Frontend Proxy Configuration
@@ -70,7 +70,7 @@ handle /auth/* {
 ```
 
 **Environment Variable:**
-- `CADDY_GUAC_CLIENT_URL=https://browser-sandbox-api.browser-sandbox.svc.cluster.local:4567`
+- `CADDY_GUAC_CLIENT_URL=https://browser-sandbox-api.browser-sandbox.svc.cluster.local:8080`
 
 ## Troubleshooting
 
@@ -154,13 +154,13 @@ kubectl get deployment browser-sandbox-frontend -n browser-sandbox -o yaml | gre
 
 ```bash
 # Test OAuth initiation
-curl -v "https://localhost:4567/auth/oauth/github"
+curl -v "http://localhost:4000/auth/oauth/github"
 
 # Test session endpoint (should return 401)
-curl -v "https://localhost:4567/auth/me"
+curl -v "http://localhost:4000/auth/me"
 
 # Test with session cookie
-curl -v -H "Cookie: session=your_session_token" "https://localhost:4567/auth/me"
+curl -v -H "Cookie: session=your_session_token" "http://localhost:4000/auth/me"
 ```
 
 ### Cookie Debugging

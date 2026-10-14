@@ -13,39 +13,48 @@ on:
     paths-ignore:
       - 'cmd/cleanup/**'
       - 'deployments/**'
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  ENCORE_AUTH_TOKEN: ${{ secrets.ENCORE_AUTH_TOKEN }}
-
 jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
     - name: Set up Go 1.x
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
-        go-version: '^1.24'
+        go-version: '^1.25'
 
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Get dependencies
-      run: |
-        go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
+      run: go mod download
+
+    - name: Install Encore
+      run: curl --fail --location --proto '=https' --tlsv1.2 https://encore.dev/install.sh | bash
+
+    - name: Generate Encore wrappers
+      run: $HOME/.encore/bin/encore gen wrappers
 
     - name: Test Go packages
       run: go test ./...
 
-    - name: Install Encore
-      if: env.ENCORE_AUTH_TOKEN != ''
-      run: curl -L https://encore.dev/install.sh | bash
+    - name: Detect Encore credentials
+      id: encore-auth
+      env:
+        ENCORE_AUTH_TOKEN: ${{ secrets.ENCORE_AUTH_TOKEN }}
+      run: |
+        if [ -n "$ENCORE_AUTH_TOKEN" ]; then
+          echo "available=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "available=false" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Test Encore application
-      if: env.ENCORE_AUTH_TOKEN != ''
+      if: steps.encore-auth.outputs.available == 'true'
+      env:
+        ENCORE_AUTH_TOKEN: ${{ secrets.ENCORE_AUTH_TOKEN }}
       run: $HOME/.encore/bin/encore test ./...

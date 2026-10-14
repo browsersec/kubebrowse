@@ -46,7 +46,7 @@ Chrome extension attachment imports, VirusTotal integration, and Firejail harden
 
 ## Local development
 
-You need the [Encore CLI](https://encore.dev/docs/install), Go compatible with [go.mod](go.mod) (Go 1.24, toolchain 1.24.3), Node.js and npm for the frontend, Docker, `kubectl`, Tilt, and a Kubernetes development cluster with storage provisioning and access to the sandbox images.
+You need the [Encore CLI](https://encore.dev/docs/install), Go compatible with [go.mod](go.mod) (Go 1.25), Node.js and npm for the frontend, Docker, `kubectl`, Tilt, and a Kubernetes development cluster with storage provisioning and access to the sandbox images.
 
 Before the first local run, authenticate and register this existing repository with your Encore account. This updates the placeholder application ID in [encore.app](encore.app):
 
@@ -59,24 +59,43 @@ For CI Encore validation, configure an `ENCORE_AUTH_TOKEN` repository secret. Th
 
 Review [deployments/manifest.yml](deployments/manifest.yml) before applying it: it contains example credentials and deployment-specific settings. Set the Kubernetes context allowed by [Tiltfile](Tiltfile) to your development cluster. Browser and office images can be overridden with `BROWSER_IMAGE` and `OFFICE_IMAGE` in the API deployment environment.
 
-From the repository root, apply the supporting services and scanner. Start the Encore API separately so it can use your kubeconfig, or deploy it with credentials that can reach the target cluster:
+### Kubernetes session development (recommended)
+
+The API must run in the cluster to reach per-session pod DNS names and `guacd`. Tilt builds an Encore self-hosted image, deploys it with the existing service account, and forwards the API to the host:
 
 ```sh
 kubectl apply -f deployments/manifest.yml
 kubectl apply -f deployments/clamavd-api.yaml
-encore run
+tilt up
 ```
 
-Encore exposes the local API at `http://localhost:4000` by default. The frontend deployment is currently commented out in the manifest, so run the frontend separately in another terminal:
+The Tilt API forward is `http://localhost:8080`. The frontend deployment is currently commented out in the manifest, so run the frontend separately in another terminal:
 
 ```sh
 npm --prefix frontend install
-VITE_API_BASE_URL=http://localhost:4000 npm --prefix frontend run dev
+VITE_API_BASE_URL=http://localhost:8080 npm --prefix frontend run dev
 ```
 
 Open the address printed by Vite. `VITE_API_BASE_URL` supplies the backend origin for REST calls and derives the WebSocket and HTTP tunnel origins; it is also needed at build time when the frontend is hosted separately.
 
-Session creation requires a working Kubernetes connection, Redis, `guacd`, and reachable sandbox pods. Scanning requires the ClamAV API. MinIO storage is optional. The current Tilt configuration leaves PostgreSQL and Redis resources with `auto_init=False`; ensure the services required by your workflow are running. Docker Compose alone does not supply the Kubernetes cluster needed to create sessions.
+### Host API development
+
+`encore run` is useful for endpoint work that does not provision a sandbox. Start the required local dependencies first:
+
+```sh
+docker compose up -d redis guacd
+REDIS_HOST=localhost GUACD_ADDRESS=localhost:4822 encore run
+```
+
+Encore exposes this host API at `http://localhost:4000` by default. Host networking cannot resolve the cluster-only per-session pod names used by the RDP readiness check, so use the Tilt workflow above for browser or office session creation. Scanning additionally needs the ClamAV API and MinIO storage is optional.
+
+To create a deployable self-hosted image outside Tilt, use Encore rather than `docker build`:
+
+```sh
+encore build docker ghcr.io/browsersec/kubebrowse:encore-dev --base=gcr.io/distroless/static-debian12:nonroot
+```
+
+Set `CORS_ALLOWED_ORIGINS` to the exact comma-separated frontend origins for deployed environments. The current Tilt configuration leaves PostgreSQL and Redis resources with `auto_init=False`; ensure the services required by your workflow are running.
 
 See the [contribution guide](docs/CONTRIBUTING.md) and [Tilt development guide](docs/TiltDevelopment.md) for additional context. Some older examples describe previous deployment layouts; use the current manifests, Tiltfile, and frontend configuration when they differ.
 

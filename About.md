@@ -16,22 +16,21 @@ First start guacd in a container, for example:
 docker run --name guacd -d -p 4822:4822 guacamole/guacd
 ```
 
-Next run the example main:
+Next, run the Encore application:
 
 ```sh
-go run cmd/guac/main.go
+encore run
 ```
 
 Now you can connect with [the example Vue app](https://github.com/wwt/guac-vue).  By default, guac will try to connect to a guacd instance at `127.0.0.1:4822`.  If you need to configure something different, you can do so by configuring environment variables; see the configurable parameters below.
 
-Guac listens on `http://0.0.0.0:4567`.  If you have a need for the connection to Guac to be secure, you will need to pass a certificate and keyfile to it using the `CERT_PATH` and `CERT_KEY_PATH` environment variables; it will then listen on `https://0.0.0.0:4567`.  The secure connection uses TLS 1.3.
+Encore listens locally on the address it prints (normally `http://localhost:4000`) and provides TLS when deployed behind an Encore-managed gateway or your configured reverse proxy.
 
 ## Configurable parameters
 | Environment Variable | Description                                                                                              | Default Value  | Required? |
 | -------------------- | -------------------------------------------------------------------------------------------------------- | -------------- | ----------|
-| `CERT_PATH`          | Full path, including filename, to a certificate file in order for guac to listen on HTTPS (TLS 1.3)      |                | No        |
-| `CERT_KEY_PATH`      | Full path, including filename, to the certificate keyfile in order for guac to listen on HTTPS (TLS 1.3) |                | No        |
-| `GUACD_ADDRESS`      | The address and port that guacd is listening on                                                          | 127.0.0.1:4822 | No        |
+| `GUACD_ADDRESS`      | The address and port that guacd is listening on                                                          | `0.0.0.0:4822` | No        |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated browser origins permitted to use credentialed API and tunnel requests                  | local Vite origins | No        |
 
 ## Acknowledgements
 

@@ -45,3 +45,32 @@ func TestContextFormFileReturnsReusableHeader(t *testing.T) {
 		t.Fatalf("close reopened file: %v", err)
 	}
 }
+
+func TestContextShouldBindJSONValidatesBindingTags(t *testing.T) {
+	type request struct {
+		ExtensionMinutes int `json:"extension_minutes" binding:"required,min=1,max=10"`
+	}
+
+	for _, test := range []struct {
+		name    string
+		body    string
+		wantErr bool
+	}{
+		{name: "valid", body: `{"extension_minutes": 10}`},
+		{name: "missing", body: `{}`, wantErr: true},
+		{name: "too large", body: `{"extension_minutes": 11}`, wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			context := NewContext(
+				httptest.NewRecorder(),
+				httptest.NewRequest(http.MethodPost, "/sessions/example/extend", strings.NewReader(test.body)),
+				nil,
+			)
+			var value request
+			err := context.ShouldBindJSON(&value)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("ShouldBindJSON() error = %v, wantErr %t", err, test.wantErr)
+			}
+		})
+	}
+}

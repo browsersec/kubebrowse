@@ -1,4 +1,5 @@
 ENCORE ?= encore
+IMAGE ?= ghcr.io/browsersec/kubebrowse:encore-dev
 
 all: run
 
@@ -51,10 +52,11 @@ test:
 	$(ENCORE) test ./...
 
 test_coverage:
-	$(ENCORE) test ./...
+	$(ENCORE) test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out
 
 build:
-	@echo "Encore applications are built and deployed with 'encore deploy'."
+	$(ENCORE) build docker $(IMAGE) --base=gcr.io/distroless/static-debian12:nonroot
 
 # MkDocs documentation targets
 docs-setup:

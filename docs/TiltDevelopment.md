@@ -4,7 +4,7 @@ This document describes how to use Tilt for local development of the Kubebrowse 
 
 ## Prerequisites
 
-1.  **Docker**: Ensure Docker is installed and running. Tilt uses Docker to build container images. (https://docs.docker.com/get-docker/)
+1.  **Docker and Encore**: Ensure Docker is installed and running. Install and authenticate the [Encore CLI](https://encore.dev/docs/install); Tilt invokes `encore build docker` to build the API image.
 2.  **Kubernetes Cluster**: You need a local Kubernetes cluster. Options include:
     *   [Kind (Kubernetes IN Docker)](https://kind.sigs.k8s.io/docs/user/quick-start/)
     *   [Minikube](https://minikube.sigs.k8s.io/docs/start/)
@@ -35,25 +35,18 @@ This document describes how to use Tilt for local development of the Kubebrowse 
     tilt up
     ```
     Tilt will:
-    *   Build the container images for the frontend and backend services.
+    *   Build the Encore API image and deploy the Kubernetes resources in `deployments/manifest.yml`.
     *   Deploy all resources defined in `deployments/manifest.yml` to your Kubernetes cluster.
     *   Set up port forwarding for accessing the services locally:
-        *   Backend API (`browser-sandbox-api`): `localhost:4567`
-        *   Frontend (`browser-sandbox-frontend`): `localhost:3000`
+        *   Backend API (`browser-sandbox-api`): `localhost:8080`
     *   Open a web browser with the Tilt UI, where you can monitor the status of your services, view logs, and manage resources.
 
 4.  **Accessing the Application**:
-    *   Frontend: Open your browser and go to `http://localhost:3000`
-    *   API: Accessible at `http://localhost:4567`
+    *   API: Accessible at `http://localhost:8080`
 
 ## Development Workflow
 
-*   **Live Updates**:
-    *   **Backend (Go)**: When you save changes to Go files in the `./api`, `./cmd`, or `./internal` directories, Tilt will automatically sync the changes to the running container, rebuild the Go application, and restart the pod.
-    *   **Frontend (Vite/React)**: When you save changes to files in the `./frontend/src` directory (or other relevant frontend paths like `index.html`, `package.json`), Tilt will sync the files.
-        *   If `package.json` or `bun.lockb` changes, dependencies will be reinstalled, and static assets will be rebuilt.
-        *   Caddy will serve the updated static files. You may need to refresh your browser to see these changes.
-        *(Note: For a Hot Module Replacement (HMR) experience with Vite, the frontend Dockerfile's CMD and Tiltfile's port-forwarding would need to be adjusted to use Vite's dev server directly.)*
+*   **API rebuilds**: Changes under `api/` and `internal/` trigger the `encore-build` resource, which rebuilds the self-hosted image. Restart the API resource after a successful image build.
 
 *   **Logs**: View real-time logs for each service in the Tilt UI.
 
@@ -69,6 +62,6 @@ This document describes how to use Tilt for local development of the Kubebrowse 
 *   **`tilt doctor`**: Run `tilt doctor` in your terminal. This command checks your Tilt and Kubernetes setup and provides suggestions for fixing common issues.
 *   **Kubernetes Context**: Ensure `kubectl config current-context` points to the correct local cluster. If not, use `kubectl config use-context <your-local-cluster-context>`.
 *   **Image Pull Issues**: If Kubernetes has trouble pulling images, ensure your `imagePullPolicy` in `deployments/manifest.yml` is `IfNotPresent` for the services managed by Tilt (api, frontend). This should already be set by a previous step. Also, check your local Docker environment and Kubernetes cluster's ability to access local images (e.g., if using Minikube, you might need `minikube image load <image_name>` or configure Docker environment sharing). The `update_mode(UPDATE_MODE_AUTO)` in Tiltfile usually handles this for local clusters.
-*   **Port Conflicts**: If the default ports (4567 for API, 3000 for frontend) are already in use on your local machine, you can change the local port in the `port_forwards` section of the `Tiltfile`. For example, change `port_forwards=['3000:80']` to `port_forwards=['3001:80']` to use `localhost:3001` for the frontend.
+*   **Port Conflicts**: If port 8080 is already in use, change the API `port_forwards` entry in the `Tiltfile`.
 
 This setup should significantly improve the local development experience when working with Kubernetes.

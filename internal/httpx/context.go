@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
 
 // H is a convenience type for JSON object responses.
@@ -70,9 +72,18 @@ func (c *Context) JSON(status int, value interface{}) {
 	_ = json.NewEncoder(c.Writer).Encode(value)
 }
 
-// ShouldBindJSON decodes a JSON request body.
+var validate = func() *validator.Validate {
+	validator := validator.New()
+	validator.SetTagName("binding")
+	return validator
+}()
+
+// ShouldBindJSON decodes a JSON request body and validates its binding tags.
 func (c *Context) ShouldBindJSON(value interface{}) error {
-	return json.NewDecoder(c.Request.Body).Decode(value)
+	if err := json.NewDecoder(c.Request.Body).Decode(value); err != nil {
+		return err
+	}
+	return validate.Struct(value)
 }
 
 // Param returns a named route parameter.

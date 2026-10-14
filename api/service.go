@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,6 +44,7 @@ type runtimeState struct {
 	wsServer       *guac2.WebsocketServer
 	wsServerShared *guac2.WebsocketServer
 	cleanupService *cleanup.SessionCleanupService
+	allowedOrigins map[string]struct{}
 }
 
 var (
@@ -61,12 +63,13 @@ func initializeApplication() *runtimeState {
 	logging.Init(logrus.TraceLevel)
 
 	state := &runtimeState{
-		redisClient:  redis2.InitRedis(),
-		k8sNamespace: environmentOr("KUBERNETES_NAMESPACE", "browser-sandbox"),
-		guacdAddr:    environmentOr("GUACD_ADDRESS", "0.0.0.0:4822"),
-		clamavAddr:   environmentOr("CLAMAV_ADDRESS", "http://clamd-api.browser-sandbox.svc.cluster.local:3000"),
-		minioBucket:  environmentOr("MINIO_BUCKET", "kubebrowse-files"),
-		tunnelStore:  guac2.NewActiveTunnelStore(),
+		redisClient:    redis2.InitRedis(),
+		k8sNamespace:   environmentOr("KUBERNETES_NAMESPACE", "browser-sandbox"),
+		guacdAddr:      environmentOr("GUACD_ADDRESS", "0.0.0.0:4822"),
+		clamavAddr:     environmentOr("CLAMAV_ADDRESS", "http://clamd-api.browser-sandbox.svc.cluster.local:3000"),
+		minioBucket:    environmentOr("MINIO_BUCKET", "kubebrowse-files"),
+		tunnelStore:    guac2.NewActiveTunnelStore(),
+		allowedOrigins: allowedOrigins(),
 	}
 
 	state.browserImage = os.Getenv("BROWSER_IMAGE")
@@ -105,6 +108,8 @@ func initializeApplication() *runtimeState {
 	}
 
 	state.wsServer.OnDisconnect = state.onDisconnect
+	state.wsServer.CheckOrigin = state.isAllowedOrigin
+	state.wsServerShared.CheckOrigin = state.isAllowedOrigin
 	return state
 }
 
@@ -113,6 +118,24 @@ func environmentOr(name, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func allowedOrigins() map[string]struct{} {
+	origins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if origins == "" {
+		origins = os.Getenv("FRONTEND_URL")
+	}
+	if origins == "" {
+		origins = "http://localhost:5173,http://localhost:3000,http://localhost:8080"
+	}
+
+	allowed := make(map[string]struct{})
+	for _, origin := range strings.Split(origins, ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			allowed[origin] = struct{}{}
+		}
+	}
+	return allowed
 }
 
 func newKubernetesClient() *kubernetes.Clientset {
@@ -171,9 +194,11 @@ func (state *runtimeState) onDisconnect(connectionID string, request *http.Reque
 		logrus.Warnf("Could not get disconnected session %s: %v", uuid, err)
 		return
 	}
-	ttl, err := redis2.GetCurrentSessionTTL(ctx, state.redisClient, uuid)
-	if err != nil || ttl <= 0 {
-		ttl = session.TimeoutDuration
+	reportedTTL, ttlErr := redis2.GetCurrentSessionTTL(ctx, state.redisClient, uuid)
+	ttl, ok := preservedSessionTTL(session, reportedTTL, ttlErr)
+	if !ok {
+		logrus.Warnf("Not recording disconnect for expired session %s", uuid)
+		return
 	}
 	session.DisconnectionCount++
 	if err := redis2.SetSessionDataWithContext(ctx, state.redisClient, uuid, session, ttl); err != nil {
@@ -202,17 +227,55 @@ func (state *runtimeState) onDisconnect(connectionID string, request *http.Reque
 	}()
 }
 
-func (state *runtimeState) handle(w http.ResponseWriter, r *http.Request, params map[string]string, handler httpx.HandlerFunc) {
-	origin := r.Header.Get("Origin")
-	if origin != "" {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Vary", "Origin")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+func preservedSessionTTL(session *redis2.SessionData, ttl time.Duration, err error) (time.Duration, bool) {
+	if err == nil && ttl > 0 {
+		return ttl, true
 	}
+	if session.ExpireAt.IsZero() {
+		return 0, false
+	}
+	ttl = time.Until(session.ExpireAt)
+	return ttl, ttl > 0
+}
+
+func (state *runtimeState) isAllowedOrigin(request *http.Request) bool {
+	origin := request.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	_, allowed := state.allowedOrigins[origin]
+	return allowed
+}
+
+// handleCORS writes CORS headers for approved browser origins. It returns true
+// when it has completed an OPTIONS request and the endpoint must not continue.
+func (state *runtimeState) handleCORS(w http.ResponseWriter, r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return false
+	}
+	if !state.isAllowedOrigin(r) {
+		if r.Method == http.MethodOptions {
+			http.Error(w, "origin is not allowed", http.StatusForbidden)
+			return true
+		}
+		return false
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Vary", "Origin")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Length, Content-Type, Authorization")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
+		return true
+	}
+	return false
+}
+
+func (state *runtimeState) handle(w http.ResponseWriter, r *http.Request, params map[string]string, handler httpx.HandlerFunc) {
+	if state.handleCORS(w, r) {
 		return
 	}
 

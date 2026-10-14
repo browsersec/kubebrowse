@@ -14,6 +14,9 @@ import (
 type WebsocketServer struct {
 	connect   func(*http.Request) (Tunnel, error)
 	connectWs func(*websocket.Conn, *http.Request) (Tunnel, error)
+	// CheckOrigin authorizes browser origins before the WebSocket upgrade. A nil
+	// value retains gorilla/websocket's same-origin default.
+	CheckOrigin func(*http.Request) bool
 
 	// OnConnect is an optional callback called when a websocket connects.
 	// Deprecated: use OnConnectWs
@@ -51,9 +54,7 @@ func (s *WebsocketServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  websocketReadBufferSize,
 		WriteBufferSize: websocketWriteBufferSize,
-		CheckOrigin: func(r *http.Request) bool {
-			return true // TODO
-		},
+		CheckOrigin:     s.CheckOrigin,
 	}
 	protocol := r.Header.Get("Sec-Websocket-Protocol")
 	ws, err := upgrader.Upgrade(w, r, http.Header{

@@ -188,6 +188,9 @@ func GetWebSocketMetricsSummary(w http.ResponseWriter, r *http.Request) {
 //encore:api public raw path=/tunnel
 func Tunnel(w http.ResponseWriter, r *http.Request) {
 	state := application()
+	if state.handleCORS(w, r) {
+		return
+	}
 	state.servlet.ServeHTTP(w, r)
 }
 
@@ -196,6 +199,9 @@ func Tunnel(w http.ResponseWriter, r *http.Request) {
 //encore:api public raw path=/tunnel/*path
 func TunnelPath(w http.ResponseWriter, r *http.Request) {
 	state := application()
+	if state.handleCORS(w, r) {
+		return
+	}
 	state.servlet.ServeHTTP(w, r)
 }
 
@@ -210,14 +216,22 @@ func WebsocketTunnel(w http.ResponseWriter, r *http.Request) {
 //
 //encore:api public raw path=/shared-tunnel
 func SharedTunnel(w http.ResponseWriter, r *http.Request) {
-	application().servletShared.ServeHTTP(w, r)
+	state := application()
+	if state.handleCORS(w, r) {
+		return
+	}
+	state.servletShared.ServeHTTP(w, r)
 }
 
 // SharedTunnelPath handles shared Guacamole HTTP tunnel subpaths.
 //
 //encore:api public raw path=/shared-tunnel/*path
 func SharedTunnelPath(w http.ResponseWriter, r *http.Request) {
-	application().servletShared.ServeHTTP(w, r)
+	state := application()
+	if state.handleCORS(w, r) {
+		return
+	}
+	state.servletShared.ServeHTTP(w, r)
 }
 
 // SharedWebsocketTunnel upgrades the shared display WebSocket.

@@ -60,13 +60,13 @@ We are committed to a welcoming community. Please read and follow our [Code of C
 
 4. **Access the application**
 
-   - Open a browser and navigate to `http://localhost:4567/connect`
+    - Open the local Encore address printed by `make run` (normally `http://localhost:4000`).
 
 ### Troubleshooting Common Issues
 
 #### Go Version Mismatch
 
-If you encounter errors like `compile: version "go1.24.0" does not match go tool version "go1.24.3"`, follow these steps:
+If you encounter Go version mismatch errors, use the Go version declared in `go.mod` (currently Go 1.25).
 
 1. **Check your Go version**
 
@@ -97,19 +97,19 @@ If you encounter errors like `compile: version "go1.24.0" does not match go tool
    Using Go's official installation:
    ```bash
    # Download the latest version
-   wget https://go.dev/dl/go1.24.3.linux-amd64.tar.gz
+    wget https://go.dev/dl/go1.25.0.linux-amd64.tar.gz
    
    # Remove old installation (if needed)
    sudo rm -rf /usr/local/go
    
    # Install the new version
-   sudo tar -C /usr/local -xzf go1.24.3.linux-amd64.tar.gz
+    sudo tar -C /usr/local -xzf go1.25.0.linux-amd64.tar.gz
    ```
    
    Or using a version manager like `asdf`:
    ```bash
-   asdf install golang 1.24.3
-   asdf global golang 1.24.3
+    asdf install golang 1.25.0
+    asdf global golang 1.25.0
    ```
 
 6. **Check your environment variables**
@@ -129,7 +129,7 @@ If you encounter errors like `compile: version "go1.24.0" does not match go tool
 
 ### Project Structure
 
-- `/cmd/guac/` - Main application entry point
+- `/api/` - Encore service endpoints and application initialization
 - `/utils/` - Utility functions
 - `/certs/` - Certificate files for TLS
 - `/.githooks/` - Git hooks for development
